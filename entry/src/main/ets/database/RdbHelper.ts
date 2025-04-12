@@ -34,7 +34,7 @@ class RdbHelper {
       console.info('RdbHelper', 'Getting RDB store...');
       try {
         // RDB open callback for handling database creation and upgrades
-        const RdbOpenCallback: relationalStore.RdbOpenCallback = {
+        const RdbOpenCallback = {
           onCreate: (store: relationalStore.RdbStore) => {
             console.info('RdbHelper', 'Database creating...');
             store.executeSql(SQL_CREATE_TABLE);
@@ -48,7 +48,8 @@ class RdbHelper {
           // onDowngrade, onOpen can be added if needed
         };
         // Obtain the RDB store instance
-        this.rdbStore = await relationalStore.getRdbStore(context, STORE_CONFIG, RdbOpenCallback);
+        // Using double assertion based on TS suggestion for potentially unrelated types
+        this.rdbStore = await relationalStore.getRdbStore(context, STORE_CONFIG, RdbOpenCallback as any) as unknown as relationalStore.RdbStore;
         console.info('RdbHelper', 'Database store obtained successfully.');
       } catch (e) {
         console.error('RdbHelper', `Get RDB store failed, error: ${JSON.stringify(e)}`);
