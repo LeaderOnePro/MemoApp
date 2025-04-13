@@ -3,8 +3,7 @@ import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { MemoViewModel } from '../viewmodel/MemoViewModel';
 import { Memo } from '../model/Memo';
-// Import getContext if needed (Stage model)
-import getContext from '@ohos.abilityAccessCtrl';
+// Removed getContext import again
 
 @Entry
 @Component
@@ -19,15 +18,20 @@ struct MemoEditPage {
   private memoId: number | null = null; // To store the ID passed from the list page
   private isEditMode: boolean = false;
 
+  // Add context property to potentially receive context from framework
+  private context: common.UIAbilityContext | null = null; 
+
   aboutToAppear() {
-    // Use default import for getContext (assuming this works now)
-    const context = getContext(this) as common.UIAbilityContext;
-    if (context) {
-      this.viewModel.initialize(context);
+    // Attempt to use this.context directly if available
+    if (this.context && typeof this.context === 'object') { // Basic check if context exists
+      console.info('MemoEditPage', 'Using this.context');
+      this.viewModel.initialize(this.context);
     } else {
-      console.error('MemoEditPage', 'Failed to get context in aboutToAppear.');
-      // Handle context failure if necessary
-      return;
+      // Log error if context is not available via this.context
+      // In a real Stage app, context should be obtained from UIAbility and provided here.
+      console.error('MemoEditPage', 'Failed to get context via this.context. App might need context injection.');
+      promptAction.showToast({ message: '无法初始化页面环境' });
+      return; // Stop further processing if context is unavailable
     }
 
     // Check router parameters for memoId
@@ -112,7 +116,7 @@ struct MemoEditPage {
 
         // Loading indicator during save
         if (this.viewModel.isLoading) {
-          Progress({ type: ProgressType.Circular, value: 0 }).width(24).height(24).margin({ right: 16 })
+          Progress({ type: ProgressType.Ring, value: 0 }).width(24).height(24).margin({ right: 16 })
         }
 
       }

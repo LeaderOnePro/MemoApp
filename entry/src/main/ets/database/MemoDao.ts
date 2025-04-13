@@ -138,6 +138,49 @@ class MemoDao {
   }
 
   /**
+   * Queries a single memo by its ID.
+   * @param context The application or UIAbility context.
+   * @param id The ID of the memo to query.
+   * @returns A Promise resolving with the Memo object if found, otherwise null.
+   */
+  async queryMemoById(context: common.Context, id: number): Promise<Memo | null> {
+    const store = await rdbHelper.getRdbStore(context);
+    const predicates = new relationalStore.RdbPredicates(TABLE_NAME);
+    predicates.equalTo('id', id);
+
+    let resultSet: relationalStore.ResultSet | null = null;
+    try {
+      resultSet = await store.query(predicates, COLUMNS);
+      if (resultSet && resultSet.rowCount > 0 && resultSet.goToFirstRow()) {
+        // Parse the single result
+        const memoId = resultSet.getLong(resultSet.getColumnIndex('id'));
+        const title = resultSet.getString(resultSet.getColumnIndex('title'));
+        const content = resultSet.getString(resultSet.getColumnIndex('content'));
+        const createdDate = resultSet.getLong(resultSet.getColumnIndex('created_date'));
+        const modifiedDate = resultSet.getLong(resultSet.getColumnIndex('modified_date'));
+        console.info('MemoDao', `Found memo with ID: ${id}`);
+        return new Memo(title, content, memoId, createdDate, modifiedDate);
+      } else {
+        console.warn('MemoDao', `Memo with ID ${id} not found.`);
+        return null;
+      }
+    } catch (e) {
+      console.error('MemoDao', `Query memo by ID failed: ${JSON.stringify(e)}`);
+      return null; // Return null on error
+    } finally {
+      // IMPORTANT: Always close the ResultSet.
+      if (resultSet) {
+        try {
+          await resultSet.close();
+          console.info('MemoDao', 'ResultSet closed for queryMemoById.');
+        } catch (closeError) {
+          console.error('MemoDao', `Failed to close ResultSet in queryMemoById: ${JSON.stringify(closeError)}`);
+        }
+      }
+    }
+  }
+
+  /**
    * Helper function to parse a ResultSet into an array of Memo objects.
    * Remember to close the resultSet after calling this.
    * @param resultSet The ResultSet obtained from a query.

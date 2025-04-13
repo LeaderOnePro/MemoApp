@@ -3,8 +3,6 @@ import promptAction from '@ohos.promptAction';
 import common from '@ohos.app.ability.common';
 import { MemoViewModel } from '../viewmodel/MemoViewModel';
 import { Memo } from '../model/Memo';
-// Import getContext if needed (Stage model)
-// import { getContext } from '@ohos.abilityAccessCtrl';
 
 @Entry
 @Component
@@ -18,15 +16,23 @@ struct MemoListPage {
   // State for search input, distinct from viewModel's searchKeyword to allow debouncing/manual triggering
   @State searchInput: string = '';
 
+  // Property to hold context if available directly (FA-like approach)
+  private context: common.UIAbilityContext | null = null;
+
   // Lifecycle hook: called when the page is about to appear
   aboutToAppear() {
-    // In Stage model, get context like this (adjust if FA model)
-    const context = getContext(this) as common.UIAbilityContext;
-    if (context) {
-      this.viewModel.initialize(context); // Initialize ViewModel with context
-      this.viewModel.loadInitialData();   // Load initial data
+    // Try accessing this.context directly and assert type
+    // Note: This might not work in pure Stage model if context isn't automatically injected.
+    // If this fails, context needs to be obtained via UIAbility.onCreate or similar and passed down.
+    this.context = this.context as common.UIAbilityContext; // Assuming this.context exists from framework
+
+    if (this.context) {
+      this.viewModel.initialize(this.context);
+      this.viewModel.loadInitialData();
     } else {
-      console.error('MemoListPage', 'Failed to get context in aboutToAppear.');
+      // Fallback or alternative way to get context might be needed here if this.context is null
+      // For now, log an error. Getting context reliably can be tricky depending on exact setup.
+      console.error('MemoListPage', 'Failed to get context directly (this.context is null/undefined). Needs proper injection or alternative retrieval.');
       promptAction.showToast({ message: '无法初始化页面数据' });
     }
   }
@@ -57,113 +63,115 @@ struct MemoListPage {
   }
 
   build() {
-    Column() {
-      // Title Bar
-      Row() {
-        Text('备忘录')
-          .fontSize(24)
-          .fontWeight(FontWeight.Bold)
-          .layoutWeight(1) // Take remaining space
-          .textAlign(TextAlign.Start)
-          .padding({ left: 16 })
-
-        // Optional: Settings button or other actions
-      }
-      .width('100%')
-      .height(56) // Standard action bar height
-      .backgroundColor($r('app.color.primary')) // Use resource color if defined
-
-      // Search Input
-      TextInput({ placeholder: '搜索笔记标题...', text: this.searchInput })
-        .width('90%')
-        .height(40)
-        .margin({ top: 10, bottom: 10 })
-        .onChange((value: string) => {
-          this.searchInput = value;
-          // Trigger search when input changes (consider adding debounce later)
-          this.viewModel.searchMemos(this.searchInput);
-        })
-
-      // Loading Indicator or List
-      Stack({ alignContent: Alignment.Center }) {
-        // Memo List
-        List({ space: 10 }) {
-          ForEach(this.viewModel.memos, (memo: Memo) => {
-            ListItem() {
-              Row() {
-                Column() {
-                  Text(memo.title)
-                    .fontSize(this.viewModel.titleFontSize) // Use font size from ViewModel
-                    .fontWeight(FontWeight.Medium)
-                    .maxLines(1)
-                    .textOverflow({ overflow: TextOverflow.Ellipsis })
-
-                  Text(this.formatDate(memo.modifiedDate)) // Show modified date
-                    .fontSize(12)
-                    .fontColor(Color.Gray)
-                    .margin({ top: 4 })
-                }
-                .layoutWeight(1)
-                .alignItems(HorizontalAlign.Start)
-              }
-              .padding(16)
-              .width('100%')
-            }
-            .swipeAction({ end: this.DeleteButton(memo) }) // Swipe-to-delete action
-            .onClick(() => {
-              this.goToEditPage(memo.id); // Navigate to edit page on click
-            })
-          }, (memo: Memo) => memo.id?.toString() ?? Math.random().toString()) // Use ID as key, fallback for new items
+    // Use Stack as the root container
+    Stack({ alignContent: Alignment.TopStart }) {
+      // Main content column
+      Column() {
+        // Title Bar
+        Row() {
+          Text('备忘录')
+            .fontSize(24)
+            .fontWeight(FontWeight.Bold)
+            .layoutWeight(1)
+            .textAlign(TextAlign.Start)
+            .padding({ left: 16 })
         }
         .width('100%')
-        .layoutWeight(1) // Fill remaining space
-        .visibility(this.viewModel.isLoading ? Visibility.Hidden : Visibility.Visible)
-
-        // Empty List Placeholder
-        if (!this.viewModel.isLoading && this.viewModel.memos.length === 0) {
-          Text(this.viewModel.searchKeyword ? '未找到匹配的笔记' : '还没有笔记，快添加一个吧！')
-            .fontSize(16)
-            .fontColor(Color.Gray)
-            .textAlign(TextAlign.Center)
-            .margin(20)
-        }
-
-        // Loading Progress Indicator
-        if (this.viewModel.isLoading) {
-          Progress({ type: ProgressType.Circular })
-            .width(50)
-            .color($r('app.color.accent')) // Use resource color
-        }
-      }
-      .layoutWeight(1) // Stack takes remaining space
-
-    }
-    .width('100%')
-    .height('100%')
-    .padding({ bottom: 80 }) // Add padding to avoid overlap with FAB
-    // Use Stack + Position for Floating Action Button
-    .overlay(
-      Button('+', { type: ButtonType.Circle, stateEffect: true })
-        .width(56)
         .height(56)
-        .backgroundColor($r('app.color.accent')) // Use resource color
-        .fontColor(Color.White)
-        .fontSize(24)
-        .position({ x: '85%', y: '88%' }) // Position FAB at bottom right
-        .onClick(() => {
-          this.goToEditPage(); // Navigate to add page (no ID)
-        }),
-      { align: Alignment.BottomEnd, offset: { x: -16, y: -16 } } // Alternative positioning using overlay parameters
-    )
+        .backgroundColor(Color.Blue)
+
+        // Search Input
+        TextInput({ placeholder: '搜索笔记标题...', text: this.searchInput })
+          .width('90%')
+          .height(40)
+          .margin({ top: 10, bottom: 10, left: '5%' }) // Center search input
+          .onChange((value: string) => {
+            this.searchInput = value;
+            this.viewModel.searchMemos(this.searchInput);
+          })
+
+        // Loading Indicator or List
+        Stack({ alignContent: Alignment.Center }) {
+          List({ space: 10 }) {
+            ForEach(this.viewModel.memos, (memo: Memo) => {
+              ListItem() {
+                Row() {
+                  Column() {
+                    Text(memo.title)
+                      .fontSize(this.viewModel.titleFontSize)
+                      .fontWeight(FontWeight.Medium)
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    Text(this.formatDate(memo.modifiedDate))
+                      .fontSize(12)
+                      .fontColor(Color.Gray)
+                      .margin({ top: 4 })
+                  }
+                  .layoutWeight(1)
+                  .alignItems(HorizontalAlign.Start)
+                }
+                .padding(16)
+                .width('100%')
+              }
+              .swipeAction({ end: this.DeleteButton(memo) })
+              .onClick(() => {
+                this.goToEditPage(memo.id);
+              })
+            }, (memo: Memo) => memo.id?.toString() ?? Math.random().toString())
+          }
+          .width('100%')
+          .layoutWeight(1)
+          .visibility(this.viewModel.isLoading ? Visibility.Hidden : Visibility.Visible)
+          // Add padding to the bottom of the list itself to avoid overlap with FAB
+          .padding({ bottom: 80 })
+
+          if (!this.viewModel.isLoading && this.viewModel.memos.length === 0) {
+            Text(this.viewModel.searchKeyword ? '未找到匹配的笔记' : '还没有笔记，快添加一个吧！')
+              .fontSize(16)
+              .fontColor(Color.Gray)
+              .textAlign(TextAlign.Center)
+              .margin(20)
+          }
+
+          if (this.viewModel.isLoading) {
+            Progress({ type: ProgressType.Ring, value: 0 })
+              .width(50)
+              .color(Color.Orange)
+          }
+        }
+        .layoutWeight(1) // Stack takes remaining vertical space in the Column
+      }
+      .width('100%')
+      .height('100%') // Column takes full height of the Stack
+      // Remove padding and overlay from here
+
+      // FAB placed directly within the root Stack
+      Button({ type: ButtonType.Circle }) {
+        Text('+')
+          .fontSize(24)
+          .fontColor(Color.White)
+      }
+      .width(56)
+      .height(56)
+      .backgroundColor(Color.Orange)
+      .position({ x: '85%', y: '88%' }) // Position FAB at bottom right using x/y
+      .onClick(() => {
+        this.goToEditPage();
+      })
+    }
+    .width('100%') // Stack takes full width
+    .height('100%') // Stack takes full height
   }
 
   // Custom builder function for the delete button in swipe action
   @Builder DeleteButton(memo: Memo) {
     Button() {
-      Image($r('app.media.ic_delete')) // Use a delete icon resource
-        .width(24)
-        .height(24)
-        .fillColor(Color.White)
+      Text('删')
+        .fontColor(Color.White)
+        .fontSize(18) // Adjusted size for text
+        .fontWeight(FontWeight.Bold)
+        .margin({ right: 5 }) // Adjust margin if needed
+
       Text('删除')
         .fontColor(Color.White)
         .fontSize(14)
@@ -180,8 +188,8 @@ struct MemoListPage {
           title: '确认删除',
           message: `确定要删除笔记 "${memo.title}" 吗？此操作无法撤销。`,
           buttons: [
-            { text: '取消', color: $r('app.color.accent') },
-            { text: '删除', color: Color.Red }
+            { text: '取消', color: '#FFA500' }, // Orange placeholder for accent
+            { text: '删除', color: '#FF0000' }  // Red
           ]
         });
         if (result.index === 1) { // Index 1 corresponds to the '删除' button
@@ -200,9 +208,4 @@ struct MemoListPage {
       }
     })
   }
-}
-
-// Helper function to get context (Stage Model specific)
-// Make sure this is accessible or defined correctly in your structure
-// If FA model, context retrieval is different.
-declare function getContext(component?: Object): common.UIAbilityContext; 
+} 
