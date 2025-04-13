@@ -1,5 +1,4 @@
 import common from '@ohos.app.ability.common';
-import { Observed, State } from '@ohos/hypium'; // Adjust this import based on your project's state management
 import { Memo } from '../model/Memo';
 import { memoDao } from '../database/MemoDao';
 import { preferencesHelper } from '../util/PreferencesHelper';
@@ -9,13 +8,12 @@ import { preferencesHelper } from '../util/PreferencesHelper';
  * Manages the state for the UI (memo list, font sizes) and interacts with data sources (DAO, Preferences).
  * Needs to be provided with a Context for data operations.
  */
-@Observed // Makes this class's properties observable by the UI
 export class MemoViewModel {
-  @State memos: Memo[] = []; // The list of memos displayed in the UI
-  @State titleFontSize: number = 18; // Default title font size
-  @State contentFontSize: number = 14; // Default content font size
-  @State isLoading: boolean = false; // Indicates if data is being loaded
-  @State searchKeyword: string = ''; // Current search keyword
+  memos: Memo[] = []; // The list of memos displayed in the UI
+  titleFontSize: number = 18; // Default title font size
+  contentFontSize: number = 14; // Default content font size
+  isLoading: boolean = false; // Indicates if data is being loaded
+  searchKeyword: string = ''; // Current search keyword
 
   private context: common.Context | null = null; // Store context when initialized
 
