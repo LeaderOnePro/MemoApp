@@ -1,6 +1,6 @@
 # HarmonyOS 备忘录应用 (MemoApp)
 
-这是一个基于 HarmonyOS API 9 开发的简单备忘录应用程序，用于完成 LeaderOne 的应用开发实验五。
+这是一个基于 HarmonyOS API 9 开发的简单备忘录应用程序，用于完成HarmonyOS应用开发实验五。
 
 ## 功能
 
@@ -25,4 +25,4 @@
 
 ## 许可证
 
-本项目采用 [GNU General Public License v3.0](LICENSE) 授权。 
+本项目采用 [GPLv3](LICENSE) 授权。 
